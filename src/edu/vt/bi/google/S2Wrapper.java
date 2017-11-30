@@ -57,13 +57,19 @@ public class S2Wrapper {
 		S2Cell cell = new S2Cell(S2CellId.fromToken(token));
 		return cell.getCenter();
 	}
+	
+	public static String getCellTokenForPoint(double lat, double lon, int level) {
+		S2LatLng ll = S2LatLng.fromDegrees(lat, lon);
+		S2CellId cell = S2CellId.fromLatLng(ll);
+		return cell.parent(level).toToken();
+	}
 
 	public static void main(String[] args) {
 
 		// Get a specific cell
-		S2LatLng bi = S2LatLng.fromDegrees(37.220994, -80.426176);
-		S2CellId bi_cell = S2CellId.fromLatLng(bi);
-		System.out.println("BI cell: " + bi_cell.toToken() + " (at level 13: " + bi_cell.parent(13).toToken() + ")");
+		double lat = 37.220994;
+		double lon = -80.426176;
+		System.out.println("BI cell: " + S2Wrapper.getCellTokenForPoint(lat, lon, 30) + " (at level 13: " + S2Wrapper.getCellTokenForPoint(lat, lon, 13) + ")");
 		System.out.println("==========================");
 
 		// Get the lat/lon centroid from a cell id

@@ -33,7 +33,7 @@ import com.vividsolutions.jts.geom.Polygon;
 
 public class S2CoveringDisplay {
 	
-	public static Layer getCellLayer(ArrayList<S2Polygon> s2polys, S2RegionCoverer coverer, int targetLevel){
+	public static Layer getCellLayer(ArrayList<S2CellId> cells){
 
 	    SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
 	    b.setName( "s2polys" );
@@ -45,23 +45,19 @@ public class S2CoveringDisplay {
 
 	    DefaultFeatureCollection featureCollection = new DefaultFeatureCollection("internal", TYPE);
 	   	
-	    for (S2Polygon poly : s2polys) {
-			S2CellUnion mcCovering = coverer.getCovering(poly);
-			ArrayList<S2CellId> l13_mc_cells = S2Wrapper.ensureLevel(mcCovering.cellIds(), targetLevel);
-			for (S2CellId cell : l13_mc_cells) {
-				S2Cell c = new S2Cell(cell);
-								
-				GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory();
-				Coordinate[] coords = new Coordinate[5];
-				for (int i=0; i<4; i++) {
-					S2LatLng v = new S2LatLng(c.getVertex(i));
-					coords[i] = new Coordinate(v.lngDegrees(), v.latDegrees());
-				}
-				coords[4] = coords[0];
-				Polygon p = geometryFactory.createPolygon(coords);
+	    for (S2CellId cell : cells) {
+	    	S2Cell c = new S2Cell(cell);
 
-		        featureCollection.add(SimpleFeatureBuilder.build(TYPE, new Object[]{p,cell.toToken()}, null));
-			}
+	    	GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory();
+	    	Coordinate[] coords = new Coordinate[5];
+	    	for (int i=0; i<4; i++) {
+	    		S2LatLng v = new S2LatLng(c.getVertex(i));
+	    		coords[i] = new Coordinate(v.lngDegrees(), v.latDegrees());
+	    	}
+	    	coords[4] = coords[0];
+	    	Polygon p = geometryFactory.createPolygon(coords);
+
+	    	featureCollection.add(SimpleFeatureBuilder.build(TYPE, new Object[]{p,cell.toToken()}, null));
 	    }
 	    Style style = SLD.createPolygonStyle(Color.BLUE, Color.BLUE, 0.3f);
 
@@ -103,7 +99,7 @@ public class S2CoveringDisplay {
 		coverer.setMaxCells(10000);
 		coverer.setMinLevel(targetLevel);
 		coverer.setMaxLevel(targetLevel);
-
+		
 		ArrayList<S2Polygon> s2polys = null;
 		try {
 			s2polys = ShpToS2.convertShapesToS2Polygon(new File(sourceFile), filterCQL);
@@ -111,7 +107,16 @@ public class S2CoveringDisplay {
 			e.printStackTrace();
 		}
 
-		Layer cellLayer = S2CoveringDisplay.getCellLayer(s2polys, coverer, targetLevel);
+		// union all of the cells, then ensure they are at the target level
+		S2CellUnion allCells = new S2CellUnion();
+		for (S2Polygon poly : s2polys) {
+			S2CellUnion mcCovering = coverer.getCovering(poly);
+			allCells.getUnion(allCells, mcCovering);
+	    }
+		ArrayList<S2CellId> cells = S2Wrapper.ensureLevel(allCells.cellIds(), targetLevel);
+		
+		// put the cells on a layer and the layer on the map
+		Layer cellLayer = S2CoveringDisplay.getCellLayer(cells);
 		map.addLayer(cellLayer);
 
 		// Now display the map
