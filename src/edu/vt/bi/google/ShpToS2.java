@@ -3,7 +3,6 @@ package edu.vt.bi.google;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 
 import org.geotools.data.FileDataStore;
 import org.geotools.data.FileDataStoreFinder;
@@ -12,7 +11,6 @@ import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.filter.text.cql2.CQL;
 import org.geotools.filter.text.cql2.CQLException;
-import org.opengis.feature.Property;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.filter.Filter;
 
@@ -44,18 +42,7 @@ public class ShpToS2 {
 		SimpleFeatureIterator iterator = featureCollection.features();
 		try {
 			while (iterator.hasNext()) {
-				SimpleFeature feature = iterator.next();
-				
-				// show the properties
-				Collection<Property> properties = feature.getProperties();
-				for ( Property p : properties ) {
-					System.out.print(p.getName());
-					if (p.getName().toString().equalsIgnoreCase("the_geom")) {
-						System.out.println(": ...");
-					} else {
-						System.out.println(": " + p.getValue());
-					}
-				}		
+				SimpleFeature feature = iterator.next();	
 				
 				// setup the S2 polygon builder
 				 S2PolygonBuilder polygonBuilder = new S2PolygonBuilder();
