@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Random;
 
 import org.geotools.data.FileDataStore;
 import org.geotools.data.FileDataStoreFinder;
@@ -33,7 +34,7 @@ import com.vividsolutions.jts.geom.Polygon;
 
 public class S2CoveringDisplay {
 	
-	public static Layer getCellLayer(ArrayList<S2CellId> cells){
+	public static Layer getCellLayer(ArrayList<S2CellId> cells, Color color){
 
 	    SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
 	    b.setName( "s2polys" );
@@ -59,17 +60,29 @@ public class S2CoveringDisplay {
 
 	    	featureCollection.add(SimpleFeatureBuilder.build(TYPE, new Object[]{p,cell.toToken()}, null));
 	    }
-	    Style style = SLD.createPolygonStyle(Color.BLUE, Color.BLUE, 0.3f);
+	    Style style = SLD.createPolygonStyle(color, color, 0.3f);
 
 	    Layer cellLayer = new FeatureLayer(featureCollection, style);
 	    cellLayer.setTitle("Cell Layer");
 	    return cellLayer;
 	}
+	
+	private static Color getRandomColor() {
+		Random rand = new Random();
+		float r = rand.nextFloat() / 2f + 0.5f;
+		float g = rand.nextFloat() / 2f + 0.5f;
+		float b = rand.nextFloat() / 2f + 0.5f;
+		return new Color(r, g, b);
+	}
 
 	public static void main(String[] args) {
 
+		// Note: this currently reads the shape file twice, which is very expensive; 
+		// don't use this for anything operational
+		
 		String sourceFile = "data/adm2.shp";
-		String filterCQL = "NAME_2 = 'Montgomery' and ID_1 = 47";
+		String filterCQL = "(NAME_2 = 'Montgomery' or NAME_2 = 'Floyd') and ID_1 = 47";
+		boolean flatten = false;
 
 		// Get the file
 		FileDataStore store = null;
@@ -107,17 +120,33 @@ public class S2CoveringDisplay {
 			e.printStackTrace();
 		}
 
-		// union all of the cells, then ensure they are at the target level
-		S2CellUnion allCells = new S2CellUnion();
-		for (S2Polygon poly : s2polys) {
-			S2CellUnion mcCovering = coverer.getCovering(poly);
-			allCells.getUnion(allCells, mcCovering);
-	    }
-		ArrayList<S2CellId> cells = S2Wrapper.ensureLevel(allCells.cellIds(), targetLevel);
-		
-		// put the cells on a layer and the layer on the map
-		Layer cellLayer = S2CoveringDisplay.getCellLayer(cells);
-		map.addLayer(cellLayer);
+		// Get coverings and show them as layers
+		if (flatten) {
+			// union all of the cells, then ensure they are at the target level
+			S2CellUnion allCells = new S2CellUnion();
+			for (S2Polygon poly : s2polys) {
+				S2CellUnion mcCovering = coverer.getCovering(poly);
+				allCells.getUnion(allCells, mcCovering);
+		    }
+			ArrayList<S2CellId> cells = S2Wrapper.ensureLevel(allCells.cellIds(), targetLevel);
+			
+			// put the cells on a layer and add them to the map
+			Layer cellLayer = S2CoveringDisplay.getCellLayer(cells, Color.BLUE);
+			map.addLayer(cellLayer);
+			
+		} else {
+
+			// create a layer for each polygon
+			for (S2Polygon poly : s2polys) {
+				S2CellUnion mcCovering = coverer.getCovering(poly);
+				ArrayList<S2CellId> cells = S2Wrapper.ensureLevel(mcCovering.cellIds(), targetLevel);
+				
+				// put the cells on a layer and the layer on the map
+				Layer cellLayer = S2CoveringDisplay.getCellLayer(cells, S2CoveringDisplay.getRandomColor());
+				map.addLayer(cellLayer);
+			}
+			
+		}
 
 		// Now display the map
 		JMapFrame.showMap(map);

@@ -132,7 +132,8 @@ public class S2Wrapper {
 		System.out.println("==========================");
 		
 		
-		// Now to display a covering on a map...
+		// Now to display a covering on a map... see S2CoveringDisplay
+		
 
 	}
 
