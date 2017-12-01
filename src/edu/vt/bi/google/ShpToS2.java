@@ -24,7 +24,7 @@ import com.vividsolutions.jts.geom.Geometry;
 public class ShpToS2 {
 
 
-	public static ArrayList<S2Polygon> convertShapesToS2Polygon(File sourceFile, String featureFilterCQL) throws IOException, CQLException {
+	public static ArrayList<S2Polygon> convertShapesToS2Polygons(File sourceFile, String featureFilterCQL) throws IOException, CQLException {
 
 		// Setup the polygon array list
 		ArrayList<S2Polygon> s2polys = new ArrayList<S2Polygon>();
@@ -84,7 +84,7 @@ public class ShpToS2 {
 		
 		ArrayList<S2Polygon> s2polys = null;
 		try {
-			s2polys = ShpToS2.convertShapesToS2Polygon(new File("data/adm2.shp"),
+			s2polys = ShpToS2.convertShapesToS2Polygons(new File("data/adm2.shp"),
 					"NAME_2 = 'Citrus' or (NAME_2 = 'Montgomery' and ID_1 = 47)");
 		} catch (Exception e) {
 			e.printStackTrace();

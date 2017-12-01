@@ -24,10 +24,8 @@ import org.opengis.feature.simple.SimpleFeatureType;
 
 import com.google.common.geometry.S2Cell;
 import com.google.common.geometry.S2CellId;
-import com.google.common.geometry.S2CellUnion;
 import com.google.common.geometry.S2LatLng;
 import com.google.common.geometry.S2Polygon;
-import com.google.common.geometry.S2RegionCoverer;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Polygon;
@@ -100,51 +98,52 @@ public class S2CoveringDisplay {
 
 		// Create a map content and add our shapefile to it
 		MapContent map = new MapContent();
-		map.setTitle("Quickstart");
+		map.setTitle("S2 Covering Check");
 
 		Style style = SLD.createSimpleStyle(featureSource.getSchema());
 		Layer layer = new FeatureLayer(featureSource, style);
 		map.addLayer(layer);
 
-		// Get a coverage at level 13
-		int targetLevel = 13;
-		S2RegionCoverer coverer = new S2RegionCoverer();
-		coverer.setMaxCells(10000);
-		coverer.setMinLevel(targetLevel);
-		coverer.setMaxLevel(targetLevel);
-		
+		// convert shapes to S2Polygons
 		ArrayList<S2Polygon> s2polys = null;
 		try {
-			s2polys = ShpToS2.convertShapesToS2Polygon(new File(sourceFile), filterCQL);
+			s2polys = ShpToS2.convertShapesToS2Polygons(new File(sourceFile), filterCQL);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		// Get coverings and show them as layers
+		// Get a coverage at level 13
+		int targetLevel = 13;
 		if (flatten) {
 			// union all of the cells, then ensure they are at the target level
-			S2CellUnion allCells = new S2CellUnion();
+			ArrayList<S2CellId> allCells = new ArrayList<S2CellId>();
 			for (S2Polygon poly : s2polys) {
-				S2CellUnion mcCovering = coverer.getCovering(poly);
-				allCells.getUnion(allCells, mcCovering);
+				allCells.addAll(S2Wrapper.getCovering(poly, targetLevel, false));
 		    }
-			ArrayList<S2CellId> cells = S2Wrapper.ensureLevel(allCells.cellIds(), targetLevel);
 			
 			// put the cells on a layer and add them to the map
-			Layer cellLayer = S2CoveringDisplay.getCellLayer(cells, Color.BLUE);
+			Layer cellLayer = S2CoveringDisplay.getCellLayer(allCells, Color.BLUE);
 			map.addLayer(cellLayer);
 			
 		} else {
 
 			// create a layer for each polygon
 			for (S2Polygon poly : s2polys) {
-				S2CellUnion mcCovering = coverer.getCovering(poly);
-				ArrayList<S2CellId> cells = S2Wrapper.ensureLevel(mcCovering.cellIds(), targetLevel);
+				ArrayList<S2CellId> covering = S2Wrapper.getCovering(poly, targetLevel, false);
 				
 				// put the cells on a layer and the layer on the map
-				Layer cellLayer = S2CoveringDisplay.getCellLayer(cells, S2CoveringDisplay.getRandomColor());
+				Layer cellLayer = S2CoveringDisplay.getCellLayer(covering, S2CoveringDisplay.getRandomColor());
 				map.addLayer(cellLayer);
 			}
+			
+			// color 
+			S2Polygon poly1 = s2polys.get(0);
+			S2Polygon poly2 = s2polys.get(1);
+			ArrayList<S2CellId> disputedCells = S2Wrapper.getDisputedCells(poly1, poly2, targetLevel);
+			
+			Layer cellLayer = S2CoveringDisplay.getCellLayer(disputedCells, S2CoveringDisplay.getRandomColor());
+			map.addLayer(cellLayer);
 			
 		}
 
