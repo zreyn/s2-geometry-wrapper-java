@@ -107,7 +107,7 @@ public class S2CoveringDisplay {
 		// convert shapes to S2Polygons
 		ArrayList<S2Polygon> s2polys = null;
 		try {
-			s2polys = ShpToS2.convertShapesToS2Polygons(new File(sourceFile), filterCQL);
+			s2polys = GeoToolsWrapper.shapesToS2Polygons(new File(sourceFile), filterCQL);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
