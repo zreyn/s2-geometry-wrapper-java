@@ -106,7 +106,8 @@ public class S2CoveringDisplay {
 		String sourceFile = "data/adm2.shp";
 		String filterCQL = "(NAME_2 = 'Montgomery' or NAME_2 = 'Floyd') and ID_1 = 47";
 		boolean flatten = false;
-		boolean showDisputed = false;
+		boolean showCustomLayer = false;
+		boolean settleDisputes = true;
 
 		// Get the file
 		FileDataStore store = null;
@@ -153,51 +154,76 @@ public class S2CoveringDisplay {
 			map.addLayer(cellLayer);
 			
 		} else {
-
-			// create a layer for each polygon
-			for (S2Polygon poly : s2polys) {
-				ArrayList<S2CellId> covering = S2Wrapper.getCovering(poly, targetLevel, false);
+			if (settleDisputes) {
+			
+				// get all the coverings as cell id sets
+				ArrayList<S2CellIdSet> cellIds = new ArrayList<S2CellIdSet>(s2polys.size());
+				for (S2Polygon poly : s2polys) {
+					ArrayList<S2CellId> covering = S2Wrapper.getCovering(poly, targetLevel, false);
+					cellIds.add(new S2CellIdSet(covering));
+				}
 				
-				// put the cells on a layer and the layer on the map
-				Layer cellLayer = S2CoveringDisplay.getCellLayer(covering, S2CoveringDisplay.getRandomColor());
-				//map.addLayer(cellLayer);
+				// for each pair-wise shape, find the disputed cells
+				for (int i=0; i<s2polys.size()-1; i++) {
+					for (int j=i+1; j<s2polys.size(); j++) {
+						S2Polygon poly1 = s2polys.get(i);
+						S2Polygon poly2 = s2polys.get(j);
+						ArrayList<S2CellId> disputedCells = S2Wrapper.getDisputedCells(poly1, poly2, targetLevel);
+						
+						// for each cell, see who this one belongs to based on area
+						for (S2CellId cell : disputedCells) {
+							double poly1area = S2Wrapper.getFractionOfCellWithin(cell, poly1);
+							double poly2area = S2Wrapper.getFractionOfCellWithin(cell, poly2);	
+							if (poly1area < poly2area) {
+								cellIds.get(i).remove(cell);
+ 							} else {
+ 								cellIds.get(j).remove(cell);
+ 							}
+						}
+						
+					}
+				}
+				
+				// for each covering, add a layer to the map
+				for (S2CellIdSet set : cellIds) {
+					Layer cellLayer = S2CoveringDisplay.getCellLayer(set.getCellIds(), S2CoveringDisplay.getRandomColor());
+					map.addLayer(cellLayer);
+				}
+
+			} else {
+				// create a layer for each polygon
+				for (S2Polygon poly : s2polys) {
+					ArrayList<S2CellId> covering = S2Wrapper.getCovering(poly, targetLevel, false);
+					
+					// put the cells on a layer and the layer on the map
+					Layer cellLayer = S2CoveringDisplay.getCellLayer(covering, S2CoveringDisplay.getRandomColor());
+					map.addLayer(cellLayer);
+				}
+			}
+		}
+		
+		
+		if (showCustomLayer) {
+			// create a custom layer
+			S2Polygon poly = s2polys.get(1); // grab a shape
+			ArrayList<S2CellId> cellIds = S2Wrapper.getBorderCells(poly, 13);
+			
+			// for each cell in the boundary cell set
+			ArrayList<S2Polygon> intersections = new ArrayList<S2Polygon>();
+			for (S2CellId cell : cellIds) {
+				S2Cell c = new S2Cell(cell);
+				S2Polygon cellPoly = S2Wrapper.getCellPolygon(c);
+				
+				// Get the intersection between the cell and the polygon
+				S2Polygon intersection = new S2Polygon();
+				intersection.initToIntersection(poly, cellPoly);
+				intersections.add(intersection);
 			}
 			
+			Layer customLayer = S2CoveringDisplay.getCustomLayer(intersections, S2CoveringDisplay.getRandomColor());
+			map.addLayer(customLayer);
 		}
 		
-		if (showDisputed) {
-			// create a "disputed cells" layer
-			S2Polygon poly1 = s2polys.get(0);
-			S2Polygon poly2 = s2polys.get(1);
-			ArrayList<S2CellId> disputedCells = S2Wrapper.getDisputedCells(poly1, poly2, targetLevel);
-			
-			Layer cellLayer = S2CoveringDisplay.getCellLayer(disputedCells, S2CoveringDisplay.getRandomColor());
-			map.addLayer(cellLayer);
-		}
-		
-		// create a custom layer
-		
-		S2Polygon poly = s2polys.get(1); // grab a shape
-		S2CellIdSet cells = new S2CellIdSet();
-		cells.addAll(S2Wrapper.getCovering(poly, 13, false)); // add a covering
-		cells.removeAll(S2Wrapper.getCovering(poly, 13, true)); // remove the interior covering
-		ArrayList<S2CellId> cellIds = cells.getCellIds();
-		
-		// for each cell in the boundary cell set
-		ArrayList<S2Polygon> intersections = new ArrayList<S2Polygon>();
-		for (S2CellId cell : cellIds) {
-			S2Cell c = new S2Cell(cell);
-			S2Polygon cellPoly = S2Wrapper.getCellPolygon(c);
-			
-			// Get the intersection between the cell and the polygon
-			S2Polygon intersection = new S2Polygon();
-			intersection.initToIntersection(poly, cellPoly);
-			intersections.add(intersection);
-		}
-		
-		Layer customLayer = S2CoveringDisplay.getCustomLayer(intersections, S2CoveringDisplay.getRandomColor());
-		map.addLayer(customLayer);
-
 		// Now display the map
 		JMapFrame.showMap(map);
 
