@@ -17,12 +17,14 @@ import org.opengis.filter.Filter;
 
 import com.google.common.geometry.S2Cell;
 import com.google.common.geometry.S2LatLng;
+import com.google.common.geometry.S2Loop;
 import com.google.common.geometry.S2Point;
 import com.google.common.geometry.S2Polygon;
 import com.google.common.geometry.S2PolygonBuilder;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Polygon;
 
 public class GeoToolsWrapper {
@@ -99,9 +101,36 @@ public class GeoToolsWrapper {
 		return p;
 	}
 	
-	public static Polygon s2PolygonToPolygon(S2Polygon s2Poly) {
-		// XXX TO DO
-		return null;
+	public static MultiPolygon s2PolygonToPolygon(S2Polygon s2Poly) {
+		GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory();
+		
+		Polygon polys[] = new Polygon[s2Poly.numLoops()];
+		for (int i=0; i< s2Poly.numLoops(); i++) {
+			
+			S2Loop loop = s2Poly.loop(i);
+			
+			Coordinate [] coords = new Coordinate[loop.numVertices()+1];
+			Coordinate firstCoordInLoop = null;
+			for (int j=0; j<loop.numVertices(); j++) {
+				S2LatLng v = new S2LatLng(loop.vertex(j));
+				Coordinate curr = new Coordinate(v.lngDegrees(), v.latDegrees());
+				coords[j] = new Coordinate(v.lngDegrees(), v.latDegrees());	
+				
+				if (firstCoordInLoop == null) {
+					firstCoordInLoop = curr;
+				}
+	
+			}
+			
+			// close each loop
+			coords[loop.numVertices()] = firstCoordInLoop;
+			
+			polys[i] = geometryFactory.createPolygon(coords);
+		}	
+
+
+		MultiPolygon mp = geometryFactory.createMultiPolygon(polys);
+		return mp;
 	}
 
 	public static S2Polygon getS2Intersection(Polygon poly1, Polygon poly2) {

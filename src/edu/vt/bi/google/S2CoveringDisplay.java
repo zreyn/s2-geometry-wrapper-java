@@ -28,6 +28,7 @@ import com.google.common.geometry.S2LatLng;
 import com.google.common.geometry.S2Polygon;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Polygon;
 
 public class S2CoveringDisplay {
@@ -35,7 +36,7 @@ public class S2CoveringDisplay {
 	public static Layer getCellLayer(ArrayList<S2CellId> cells, Color color){
 
 	    SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
-	    b.setName( "s2polys" );
+	    b.setName( "s2cells" );
 	    b.setCRS( DefaultGeographicCRS.WGS84 ); 
 	    b.add( "geom", Polygon.class );
 	    b.add( "token", String.class );
@@ -65,6 +66,30 @@ public class S2CoveringDisplay {
 	    return cellLayer;
 	}
 	
+	public static Layer getCustomLayer(ArrayList<S2Polygon> s2polys, Color color){
+
+	    SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
+	    b.setName( "s2polys" );
+	    b.setCRS( DefaultGeographicCRS.WGS84 ); 
+	    b.add( "geom", Polygon.class );
+
+	    final SimpleFeatureType TYPE = b.buildFeatureType();
+
+	    DefaultFeatureCollection featureCollection = new DefaultFeatureCollection("internal", TYPE);
+	   	
+	    for (S2Polygon poly : s2polys) {
+	    	
+	    	MultiPolygon p = GeoToolsWrapper.s2PolygonToPolygon(poly);
+
+	    	featureCollection.add(SimpleFeatureBuilder.build(TYPE, new Object[]{p}, null));
+	    }
+	    Style style = SLD.createPolygonStyle(color, color, 0.3f);
+
+	    Layer cellLayer = new FeatureLayer(featureCollection, style);
+	    cellLayer.setTitle("Cell Layer");
+	    return cellLayer;
+	}
+	
 	private static Color getRandomColor() {
 		Random rand = new Random();
 		float r = rand.nextFloat() / 2f + 0.5f;
@@ -81,6 +106,7 @@ public class S2CoveringDisplay {
 		String sourceFile = "data/adm2.shp";
 		String filterCQL = "(NAME_2 = 'Montgomery' or NAME_2 = 'Floyd') and ID_1 = 47";
 		boolean flatten = false;
+		boolean showDisputed = false;
 
 		// Get the file
 		FileDataStore store = null;
@@ -134,18 +160,43 @@ public class S2CoveringDisplay {
 				
 				// put the cells on a layer and the layer on the map
 				Layer cellLayer = S2CoveringDisplay.getCellLayer(covering, S2CoveringDisplay.getRandomColor());
-				map.addLayer(cellLayer);
+				//map.addLayer(cellLayer);
 			}
 			
-			// color 
+		}
+		
+		if (showDisputed) {
+			// create a "disputed cells" layer
 			S2Polygon poly1 = s2polys.get(0);
 			S2Polygon poly2 = s2polys.get(1);
 			ArrayList<S2CellId> disputedCells = S2Wrapper.getDisputedCells(poly1, poly2, targetLevel);
 			
 			Layer cellLayer = S2CoveringDisplay.getCellLayer(disputedCells, S2CoveringDisplay.getRandomColor());
 			map.addLayer(cellLayer);
-			
 		}
+		
+		// create a custom layer
+		
+		S2Polygon poly = s2polys.get(1); // grab a shape
+		S2CellIdSet cells = new S2CellIdSet();
+		cells.addAll(S2Wrapper.getCovering(poly, 13, false)); // add a covering
+		cells.removeAll(S2Wrapper.getCovering(poly, 13, true)); // remove the interior covering
+		ArrayList<S2CellId> cellIds = cells.getCellIds();
+		
+		// for each cell in the boundary cell set
+		ArrayList<S2Polygon> intersections = new ArrayList<S2Polygon>();
+		for (S2CellId cell : cellIds) {
+			S2Cell c = new S2Cell(cell);
+			S2Polygon cellPoly = S2Wrapper.getCellPolygon(c);
+			
+			// Get the intersection between the cell and the polygon
+			S2Polygon intersection = new S2Polygon();
+			intersection.initToIntersection(poly, cellPoly);
+			intersections.add(intersection);
+		}
+		
+		Layer customLayer = S2CoveringDisplay.getCustomLayer(intersections, S2CoveringDisplay.getRandomColor());
+		map.addLayer(customLayer);
 
 		// Now display the map
 		JMapFrame.showMap(map);

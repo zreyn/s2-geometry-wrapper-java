@@ -10,8 +10,9 @@ import com.google.common.geometry.S2LatLng;
 import com.google.common.geometry.S2LatLngRect;
 import com.google.common.geometry.S2Point;
 import com.google.common.geometry.S2Polygon;
+import com.google.common.geometry.S2PolygonBuilder;
 import com.google.common.geometry.S2RegionCoverer;
-import com.vividsolutions.jts.geom.Polygon;
+import com.vividsolutions.jts.geom.Coordinate;
 
 public class S2Wrapper {
 
@@ -97,41 +98,14 @@ public class S2Wrapper {
 		return disputedCells.getCellIds();
 	}
 	
-	private static long getLeafCountWithin(S2Cell cell, S2Polygon poly) {
-		if (cell.isLeaf()) {
-			if (poly.contains(cell.getCenter())) {
-				return 1;
-			} else {
-				return 0;
-			}
-		} else {
-			S2Cell children[] = new S2Cell[4];
-			for (int i = 0; i < 4; i++) {
-				children[i] = (S2Cell) cell.clone();
-			}
-			cell.subdivide(children);
-			long sum = 0;
-			for (int i = 0; i < 4; i++) {
-				sum += S2Wrapper.getLeafCountWithin(children[i], poly);
-			}
-			return sum;
-		}
-	}
-	
-	public static double getFractionOfCellWithinRecursive(S2CellId cell, S2Polygon poly) {
-		/* There are 17B leaf cells in a L13 cell, so this is probably not practical.
-		 * */
-		S2Cell c = new S2Cell(cell);
-		double totalLeaves = Math.pow(4.0, 29-cell.level());
-		double contained = (double) S2Wrapper.getLeafCountWithin(c, poly);
-		return (double) contained / (double) totalLeaves;
-	}
-	
 	public static double getFractionOfCellWithin(S2CellId cell, S2Polygon poly) {
+		
+		S2Cell c = new S2Cell(cell);
+		S2Polygon cellPoly = S2Wrapper.getCellPolygon(c);
+		
 		// Get the intersection between the cell and the polygon
-		Polygon shapePoly = GeoToolsWrapper.s2PolygonToPolygon(poly);
-		Polygon cellPoly = GeoToolsWrapper.s2CellToPolygon(new S2Cell(cell));
-		S2Polygon intersection = GeoToolsWrapper.getS2Intersection(shapePoly, cellPoly);
+		S2Polygon intersection = new S2Polygon();
+		intersection.initToIntersection(poly, cellPoly);
 				
 		// Divide areas of internal vs full covering 
 		S2RegionCoverer coverer = new S2RegionCoverer();
@@ -139,12 +113,39 @@ public class S2Wrapper {
 		coverer.setMinLevel(13);
 		coverer.setMaxLevel(28);
 
-		S2CellUnion intCovering = coverer.getInteriorCovering(intersection);
-		S2CellUnion fullCovering = coverer.getCovering(intersection);
+		// compare the intersection area vs the full cell area
+		S2CellUnion intCovering = coverer.getCovering(intersection);
+		S2CellUnion fullCovering = coverer.getCovering(cellPoly);
 		
 		return intCovering.approxArea() / fullCovering.approxArea();
 	}
 
+	public static S2Polygon getCellPolygon(S2Cell c) {
+		// setup the S2 polygon builder
+		S2PolygonBuilder polygonBuilder = new S2PolygonBuilder();
+
+		S2Point firstPoint = null;
+		S2Point prevPoint = null;
+		Coordinate[] coords = new Coordinate[5];
+		for (int i=0; i<4; i++) {
+			S2LatLng v = new S2LatLng(c.getVertex(i));
+			coords[i] = new Coordinate(v.lngDegrees(), v.latDegrees());
+			if (firstPoint == null) {
+				firstPoint = v.toPoint();
+			}
+			if (prevPoint != null) {
+				polygonBuilder.addEdge(prevPoint, v.toPoint());
+			} 
+			prevPoint = v.toPoint();
+		}
+		// close the loop
+		polygonBuilder.addEdge(prevPoint, firstPoint);
+		
+		// return the polygon 
+		return polygonBuilder.assemblePolygon();
+
+	}
+	
 	public static void main(String[] args) {
 
 		// Get a specific cell
@@ -234,8 +235,11 @@ public class S2Wrapper {
 		System.out.println("Cell (poly1area, poly2area)");
 		for (S2CellId cell : disputedCells) {
 			double poly1area = S2Wrapper.getFractionOfCellWithin(cell, poly1);
-			double poly2area = S2Wrapper.getFractionOfCellWithin(cell, poly2);
-			System.out.println(cell.toToken() + " (" + poly1area + "," + poly2area + ")");
+			double poly2area = S2Wrapper.getFractionOfCellWithin(cell, poly2);			
+			
+			String owner = "poly1";
+			if (poly1area < poly2area) owner = "poly2";
+			System.out.println(cell.toToken() + " (" + poly1area + "," + poly2area + ") ==> " + owner);
 		}
 		
 	
