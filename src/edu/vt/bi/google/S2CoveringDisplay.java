@@ -99,9 +99,6 @@ public class S2CoveringDisplay {
 	}
 
 	public static void main(String[] args) {
-
-		// Note: this currently reads the shape file twice, which is very expensive; 
-		// don't use this for anything operational
 		
 		String sourceFile = "data/adm2.shp";
 		String filterCQL = "(NAME_2 = 'Montgomery' or NAME_2 = 'Floyd') and ID_1 = 47";
@@ -134,7 +131,7 @@ public class S2CoveringDisplay {
 		// convert shapes to S2Polygons
 		ArrayList<S2Polygon> s2polys = null;
 		try {
-			s2polys = GeoToolsWrapper.shapesToS2Polygons(new File(sourceFile), filterCQL);
+			s2polys = GeoToolsWrapper.shapesToS2Polygons(featureSource, filterCQL);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

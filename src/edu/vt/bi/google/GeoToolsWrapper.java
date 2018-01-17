@@ -3,6 +3,9 @@ package edu.vt.bi.google;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 
 import org.geotools.data.FileDataStore;
 import org.geotools.data.FileDataStoreFinder;
@@ -13,6 +16,8 @@ import org.geotools.filter.text.cql2.CQL;
 import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.geometry.jts.JTSFactoryFinder;
 import org.opengis.feature.simple.SimpleFeature;
+import org.opengis.feature.simple.SimpleFeatureType;
+import org.opengis.feature.type.AttributeDescriptor;
 import org.opengis.filter.Filter;
 
 import com.google.common.geometry.S2Cell;
@@ -28,6 +33,66 @@ import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Polygon;
 
 public class GeoToolsWrapper {
+	
+	public static ArrayList<S2Feature> featuresToS2Features(SimpleFeatureSource featureSource, String featureFilterCQL, HashSet<String> attributesToIgnore) throws IOException, CQLException {
+		
+		// setup the feature array list
+		ArrayList<S2Feature> s2features = new ArrayList<S2Feature>();
+
+		// Get the features and filter
+		Filter filter;
+		SimpleFeatureCollection featureCollection;
+
+		if (featureFilterCQL != null) {
+			filter = CQL.toFilter(featureFilterCQL);
+			featureCollection = featureSource.getFeatures(filter);
+		} else {
+			featureCollection = featureSource.getFeatures();
+		}
+		
+		// get the schema, find the attribute names, ignore those in the ignore list
+		SimpleFeatureType schema = featureSource.getSchema();
+		List<AttributeDescriptor> attributes = schema.getAttributeDescriptors();
+		ArrayList<String> attributeNames = new ArrayList<String>();
+		for (AttributeDescriptor attr : attributes) {
+			String attrName = attr.getLocalName();
+			if (!attributesToIgnore.contains(attrName)) {
+				attributeNames.add(attrName);
+			}
+		}
+		
+		
+		// step through each feature that passed the filter
+		SimpleFeatureIterator iterator = featureCollection.features();
+		try {
+			while (iterator.hasNext()) {
+				SimpleFeature feature = iterator.next();	
+				
+				// setup the feature
+				S2Feature s2feature = new S2Feature();
+				
+				// get the feature's attributes
+				HashMap<String,String> featureAttributes = new HashMap<String,String>();
+				for (String attributeName : attributeNames) {
+					featureAttributes.put(attributeName, feature.getAttribute(attributeName).toString());
+				}
+				s2feature.setAttributes(featureAttributes);
+				
+				// convert the geometry to S2Polygon
+				Geometry geom = (Geometry) feature.getDefaultGeometry();
+				S2Polygon s2poly = GeoToolsWrapper.geometryToS2Polygon(geom);
+				s2feature.setS2poly(s2poly);
+				
+				// add it to the array list
+				s2features.add(s2feature);
+
+			}
+		} finally {
+			iterator.close(); // IMPORTANT
+		}
+
+		return s2features;
+	}
 
 	public static S2Polygon geometryToS2Polygon(Geometry g) {
 		
@@ -57,40 +122,12 @@ public class GeoToolsWrapper {
 
 	public static ArrayList<S2Polygon> shapesToS2Polygons(File sourceFile, String featureFilterCQL) throws IOException, CQLException {
 
-		// Setup the polygon array list
-		ArrayList<S2Polygon> s2polys = new ArrayList<S2Polygon>();
-
 		// Get the file
 		FileDataStore store = FileDataStoreFinder.getDataStore(sourceFile);
 
 		// Get the features and filter
 		SimpleFeatureSource featureSource = store.getFeatureSource();
-		Filter filter;
-		SimpleFeatureCollection featureCollection;
-		
-		if (featureFilterCQL != null) {
-			filter = CQL.toFilter(featureFilterCQL);
-			featureCollection = featureSource.getFeatures(filter);
-		} else {
-			featureCollection = featureSource.getFeatures();
-		}
-
-		// step through each feature that passed the filter
-		SimpleFeatureIterator iterator = featureCollection.features();
-		try {
-			while (iterator.hasNext()) {
-				SimpleFeature feature = iterator.next();	
-				
-				// convert the geometry to S2Polygon and add it to the array list
-				Geometry geom = (Geometry) feature.getDefaultGeometry();
-				s2polys.add(GeoToolsWrapper.geometryToS2Polygon(geom));
-
-			}
-		} finally {
-			iterator.close(); // IMPORTANT
-		}
-
-		return s2polys;
+		return GeoToolsWrapper.shapesToS2Polygons(featureSource, featureFilterCQL);
 
 	}
 	

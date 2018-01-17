@@ -4,11 +4,13 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import org.geotools.data.FileDataStore;
 import org.geotools.data.FileDataStoreFinder;
 import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.data.simple.SimpleFeatureSource;
+import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.map.FeatureLayer;
 import org.geotools.map.Layer;
 import org.geotools.map.MapContent;
@@ -55,47 +57,27 @@ public class Victoria {
 		Layer layer = new FeatureLayer(featureSource, style);
 		map.addLayer(layer);
 		
-		// Show the schema then all the features without the shapes
-		System.out.println("Schema:\n" + featureSource.getSchema() + "\n");
-		ArrayList<String> attributes = new ArrayList<String>();
-		//attributes.add("LG_PLY_PID");
-		//attributes.add("DT_CREATE");
-		//attributes.add("DT_RETIRE");
-		attributes.add("LGA_PID");
-		//attributes.add("VIC_LGA_sh");
-		//attributes.add("VIC_LGA__1");
-		//attributes.add("VIC_LGA__2");
-		//attributes.add("VIC_LGA__3");
-		//attributes.add("VIC_LGA__4");
-		//attributes.add("VIC_LGA__5");
-		
-		SimpleFeatureIterator featureIter = featureSource.getFeatures().features();
-		try {
-			while(featureIter.hasNext() ){
-				SimpleFeature feature = featureIter.next();
-				for (String att : attributes) {
-					System.out.println(att + ": " + feature.getAttribute(att));
-				}
-				
-			}
-		}
-		finally {
-			featureIter.close();
-		}
 
-		System.out.println("Converting shapes to S2Polygons...");
 		
-		// convert shapes to S2Polygons
-		ArrayList<S2Polygon> s2polys = null;
+		// XXX maybe this is easier to make a feature wrapper class.  then iterate the features
+		// once with a filter and put the features in an ArrayList.  Each feature can have an
+		// attribute hashmap, an S2poly, and maybe a set of cells.
+		System.out.println("Getting features and converting shapes to S2Polygons...");
+		HashSet<String> attrToIgnore = new HashSet<String>();
+		attrToIgnore.add("the_geom");
+		ArrayList<S2Feature> s2features;
 		try {
-			s2polys = GeoToolsWrapper.shapesToS2Polygons(featureSource, filterCQL);
-		} catch (Exception e) {
-			e.printStackTrace();
+			s2features = GeoToolsWrapper.featuresToS2Features(featureSource, filterCQL, attrToIgnore);
+		} catch (CQLException e1) {
+			e1.printStackTrace();
 		}
+		
 
-		System.out.println("Getting coverings for "+s2polys.size()+" polygons...");
+		System.out.println("Getting coverings for "+s2features.size()+" polygons...");
 		// Get coverings and show them as layers
 		// Get a coverage at level 13
+		
+		// XXX now we need to convert the rest to using the features.  get coverings for all the features, do the layers, sort out the disputes
 		
 		if (flatten) {
 			
