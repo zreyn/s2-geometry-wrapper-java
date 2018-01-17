@@ -58,6 +58,5 @@ public class S2Feature {
 	public String toString() {
 		return "S2Feature [attributes=" + attributes + ", cellIds=" + cellIds + ", s2poly=" + s2poly + "]";
 	}
-	
 
 }

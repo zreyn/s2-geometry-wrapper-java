@@ -74,7 +74,10 @@ public class GeoToolsWrapper {
 				// get the feature's attributes
 				HashMap<String,String> featureAttributes = new HashMap<String,String>();
 				for (String attributeName : attributeNames) {
-					featureAttributes.put(attributeName, feature.getAttribute(attributeName).toString());
+					Object attr = feature.getAttribute(attributeName);
+					if (attr != null) {
+						featureAttributes.put(attributeName, attr.toString());
+					}
 				}
 				s2feature.setAttributes(featureAttributes);
 				
