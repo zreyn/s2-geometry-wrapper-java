@@ -64,10 +64,51 @@ public class GeoToolsWrapper {
 		FileDataStore store = FileDataStoreFinder.getDataStore(sourceFile);
 
 		// Get the features and filter
-		SimpleFeatureSource featureSource = store.getFeatureSource();        
+		SimpleFeatureSource featureSource = store.getFeatureSource();
 		Filter filter;
-		filter = CQL.toFilter(featureFilterCQL);
-		SimpleFeatureCollection featureCollection = featureSource.getFeatures(filter);
+		SimpleFeatureCollection featureCollection;
+		
+		if (featureFilterCQL != null) {
+			filter = CQL.toFilter(featureFilterCQL);
+			featureCollection = featureSource.getFeatures(filter);
+		} else {
+			featureCollection = featureSource.getFeatures();
+		}
+
+		// step through each feature that passed the filter
+		SimpleFeatureIterator iterator = featureCollection.features();
+		try {
+			while (iterator.hasNext()) {
+				SimpleFeature feature = iterator.next();	
+				
+				// convert the geometry to S2Polygon and add it to the array list
+				Geometry geom = (Geometry) feature.getDefaultGeometry();
+				s2polys.add(GeoToolsWrapper.geometryToS2Polygon(geom));
+
+			}
+		} finally {
+			iterator.close(); // IMPORTANT
+		}
+
+		return s2polys;
+
+	}
+	
+	public static ArrayList<S2Polygon> shapesToS2Polygons(SimpleFeatureSource featureSource, String featureFilterCQL) throws IOException, CQLException {
+
+		// Setup the polygon array list
+		ArrayList<S2Polygon> s2polys = new ArrayList<S2Polygon>();
+
+		// Get the features and filter
+		Filter filter;
+		SimpleFeatureCollection featureCollection;
+		
+		if (featureFilterCQL != null) {
+			filter = CQL.toFilter(featureFilterCQL);
+			featureCollection = featureSource.getFeatures(filter);
+		} else {
+			featureCollection = featureSource.getFeatures();
+		}
 
 		// step through each feature that passed the filter
 		SimpleFeatureIterator iterator = featureCollection.features();

@@ -90,7 +90,7 @@ public class S2CoveringDisplay {
 	    return cellLayer;
 	}
 	
-	private static Color getRandomColor() {
+	public static Color getRandomColor() {
 		Random rand = new Random();
 		float r = rand.nextFloat() / 2f + 0.5f;
 		float g = rand.nextFloat() / 2f + 0.5f;
