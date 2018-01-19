@@ -21,7 +21,7 @@ import org.geotools.swing.JMapFrame;
 
 import com.google.common.geometry.S2CellId;
 
-public class Victoria {
+public class ShapesToCells {
 	
 	private static void writeTxtToFile(ArrayList<S2Feature> features, HashSet<String> attrToOutput, String outputFile) throws IOException {
 		BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
@@ -56,21 +56,21 @@ public class Victoria {
 
 	public static void main(String[] args) throws IOException {
 
-		String sourceFile = "data/VIC_LGA_POLYGON_shp.shp";
-		String filterCQL = null;
+		String sourceFile = "data/adm2.shp";
+		String filterCQL = "ID_0 = 244";
 		int targetLevel = 13;
 		boolean flatten = false;
 		boolean settleDisputes = true;
 		boolean interiorCoveringOnly = false;
 		boolean writeCellsToFile = true;
-		String outputFile = "data/vic_cells.txt";
+		String outputFile = "data/cells_by_us_counties_unique.txt";
 		
 		HashSet<String> attrToIgnore = new HashSet<String>();
 		attrToIgnore.add("the_geom");
 		
 		HashSet<String> attrToOutput = new HashSet<String>();
-		attrToOutput.add("LGA_PID");
-		attrToOutput.add("VIC_LGA__2");
+		attrToOutput.add("NAME_2");
+		attrToOutput.add("ID_2");
 
 		System.out.println("Reading file...");
 		
@@ -124,7 +124,10 @@ public class Victoria {
 		 * pairwise method handles multi-way disputes, which is a big plus.  So, we should try to make it as efficient as 
 		 * possible.
 		 * 
-		 * The original way uses getDisputedCells (which is a covering-based operation).  Let's try doing a set-based operation.
+		 * The original way uses getDisputedCells (which is a covering-based operation).  Doing a set-based operation actually
+		 * yeilds correct results.  The covering-based operation previously used still had a handful of duplicates in practice.
+		 * However, the set-based operation is not much faster.  The getFractionOfCellWithin is actually the bottleneck and 
+		 * there are a sufficient number of border disputes in this dataset.
 		 */
 			
 		if (settleDisputes) {
@@ -162,7 +165,7 @@ public class Victoria {
 		// Write a file with the features and cell ids
 		if (writeCellsToFile) {
 			System.out.println("Writing cell ids to file...");
-			Victoria.writeTxtToFile(s2features, attrToOutput, outputFile);
+			ShapesToCells.writeTxtToFile(s2features, attrToOutput, outputFile);
 		}
 		
 		
