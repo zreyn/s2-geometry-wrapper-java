@@ -20,7 +20,6 @@ import org.geotools.styling.Style;
 import org.geotools.swing.JMapFrame;
 
 import com.google.common.geometry.S2CellId;
-import com.google.common.geometry.S2Polygon;
 
 public class Victoria {
 	
@@ -65,6 +64,7 @@ public class Victoria {
 		boolean interiorCoveringOnly = false;
 		boolean writeCellsToFile = true;
 		String outputFile = "data/vic_cells.txt";
+		float areaThreshold = 0.5f;
 		
 		HashSet<String> attrToIgnore = new HashSet<String>();
 		attrToIgnore.add("the_geom");
@@ -113,26 +113,33 @@ public class Victoria {
 		System.out.println("Getting coverings for "+s2features.size()+" polygons...");
 		
 		for (S2Feature feature : s2features) {
-			ArrayList<S2CellId> covering = S2Wrapper.getCovering(feature.getS2poly(), targetLevel, interiorCoveringOnly);
+			
+			ArrayList<S2CellId> covering = new ArrayList<S2CellId>();
+			if (settleDisputes) {
+				covering = S2Wrapper.getCoveringWithAreaThresholdedBorder(feature.getS2poly(), targetLevel, areaThreshold);
+			} else {
+				covering = S2Wrapper.getCovering(feature.getS2poly(), targetLevel, interiorCoveringOnly);
+			}
+			
 			feature.setCellIds(new S2CellIdSet(covering));
 		}
 		
-		// Settle disputes means that each cell only belongs to one polygon.  The poly containing the majority of the cell wins.
+		// Settle disputes means that each cell only belongs to one polygon.
 		if (settleDisputes) {
 			
-			System.out.println("Settling disputes...");
+			System.out.println("Settling any remaining disputes...");
 
 			// for each pair-wise shape, find the disputed cells
 			for (int i=0; i<s2features.size()-1; i++) {
 				for (int j=i+1; j<s2features.size(); j++) {
-					S2Polygon poly1 = s2features.get(i).getS2poly();
-					S2Polygon poly2 = s2features.get(j).getS2poly();
-					ArrayList<S2CellId> disputedCells = S2Wrapper.getDisputedCells(poly1, poly2, targetLevel);
-
+					
+					ArrayList<S2CellId> disputedCells = S2CellIdSet.intersection(s2features.get(i).getCellIds(), s2features.get(j).getCellIds()).getCellIds();
+					
 					// for each cell, see who this one belongs to based on area
 					for (S2CellId cell : disputedCells) {
-						double poly1area = S2Wrapper.getFractionOfCellWithin(cell, poly1);
-						double poly2area = S2Wrapper.getFractionOfCellWithin(cell, poly2);	
+						System.out.println("SHIT!");
+						double poly1area = S2Wrapper.getFractionOfCellWithin(cell, s2features.get(i).getS2poly());
+						double poly2area = S2Wrapper.getFractionOfCellWithin(cell, s2features.get(j).getS2poly());	
 						if (poly1area < poly2area) {
 							s2features.get(i).getCellIds().remove(cell);
 						} else {

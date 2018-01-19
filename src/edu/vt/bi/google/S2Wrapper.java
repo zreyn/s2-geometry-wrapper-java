@@ -57,7 +57,6 @@ public class S2Wrapper {
 	
 	public static ArrayList<S2CellId> getCovering(S2Polygon s2poly, int targetLevel, boolean interiorOnly) {
 		
-		// Get a coverage at level 13
 		S2RegionCoverer coverer = new S2RegionCoverer();
 		coverer.setMaxCells(10000);
 		coverer.setMinLevel(targetLevel);
@@ -89,6 +88,28 @@ public class S2Wrapper {
 		
 		return borderCells;
 	}
+	
+	public static ArrayList<S2CellId> getCoveringWithAreaThresholdedBorder(S2Polygon s2poly, int targetLevel, float areaThreshold) {
+		
+		S2RegionCoverer coverer = new S2RegionCoverer();
+		coverer.setMaxCells(10000);
+		coverer.setMinLevel(targetLevel);
+		coverer.setMaxLevel(targetLevel);
+
+		S2CellUnion covering = coverer.getInteriorCovering(s2poly);
+		ArrayList<S2CellId> cells = S2Wrapper.ensureLevel(covering, targetLevel);
+		S2CellIdSet cellSet = new S2CellIdSet(cells);
+		
+		ArrayList<S2CellId> borderCells = S2Wrapper.getBorderCells(s2poly, targetLevel);
+		for (S2CellId cell : borderCells) {
+			if (S2Wrapper.getFractionOfCellWithin(cell, s2poly) >= areaThreshold) {
+				cellSet.add(cell);
+			}
+		}
+		
+		return cellSet.getCellIds();
+	}
+	
 	
 	
 	public static ArrayList<S2CellId> getDisputedCells(S2Polygon poly1, S2Polygon poly2, int targetLevel) {
