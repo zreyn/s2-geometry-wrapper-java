@@ -64,7 +64,6 @@ public class Victoria {
 		boolean interiorCoveringOnly = false;
 		boolean writeCellsToFile = true;
 		String outputFile = "data/vic_cells.txt";
-		float areaThreshold = 0.5f;
 		
 		HashSet<String> attrToIgnore = new HashSet<String>();
 		attrToIgnore.add("the_geom");
@@ -113,33 +112,41 @@ public class Victoria {
 		System.out.println("Getting coverings for "+s2features.size()+" polygons...");
 		
 		for (S2Feature feature : s2features) {
-			
-			ArrayList<S2CellId> covering = new ArrayList<S2CellId>();
-			if (settleDisputes) {
-				covering = S2Wrapper.getCoveringWithAreaThresholdedBorder(feature.getS2poly(), targetLevel, areaThreshold);
-			} else {
-				covering = S2Wrapper.getCovering(feature.getS2poly(), targetLevel, interiorCoveringOnly);
-			}
-			
+			ArrayList<S2CellId> covering = S2Wrapper.getCovering(feature.getS2poly(), targetLevel, interiorCoveringOnly);
 			feature.setCellIds(new S2CellIdSet(covering));
 		}
 		
-		// Settle disputes means that each cell only belongs to one polygon.
+		// Settle disputes means that each cell only belongs to one polygon.  The poly containing the majority of the cell wins.
+		
+		/* NOTE - I can't think of a way to do the disputes without this squared loop. I initially thought we could do this in
+		 * one pass using an interior covering + border cells with an area threshold, but there will be cells that are
+		 * mostly in the water getting unnecessarily removed.  We only care about that ones that go into other polygons.  This
+		 * pairwise method handles multi-way disputes, which is a big plus.  So, we should try to make it as efficient as 
+		 * possible.
+		 * 
+		 * The original way uses getDisputedCells (which is a covering-based operation).  Let's try doing a set-based operation.
+		 */
+			
 		if (settleDisputes) {
 			
-			System.out.println("Settling any remaining disputes...");
+			System.out.println("Settling disputes...");
 
 			// for each pair-wise shape, find the disputed cells
 			for (int i=0; i<s2features.size()-1; i++) {
 				for (int j=i+1; j<s2features.size(); j++) {
 					
-					ArrayList<S2CellId> disputedCells = S2CellIdSet.intersection(s2features.get(i).getCellIds(), s2features.get(j).getCellIds()).getCellIds();
+					S2Feature feature1 = s2features.get(i);
+					S2Feature feature2 = s2features.get(j);
+					
+					ArrayList<S2CellId> disputedCells = S2CellIdSet.intersection(feature1.getCellIds(), feature2.getCellIds()).getCellIds();
+					
+					if (disputedCells.size() > 0)
+						System.out.println("  " + disputedCells.size() + " disputed cells between " + i + " and " + j);
 					
 					// for each cell, see who this one belongs to based on area
 					for (S2CellId cell : disputedCells) {
-						System.out.println("SHIT!");
-						double poly1area = S2Wrapper.getFractionOfCellWithin(cell, s2features.get(i).getS2poly());
-						double poly2area = S2Wrapper.getFractionOfCellWithin(cell, s2features.get(j).getS2poly());	
+						double poly1area = S2Wrapper.getFractionOfCellWithin(cell, feature1.getS2poly());
+						double poly2area = S2Wrapper.getFractionOfCellWithin(cell, feature2.getS2poly());	
 						if (poly1area < poly2area) {
 							s2features.get(i).getCellIds().remove(cell);
 						} else {
