@@ -1,4 +1,4 @@
-package edu.vt.bi.google;
+package edu.vt.bi.google.util;
 
 import java.io.File;
 import java.io.IOException;

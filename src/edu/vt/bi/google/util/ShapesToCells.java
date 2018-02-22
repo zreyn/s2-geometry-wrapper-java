@@ -1,4 +1,4 @@
-package edu.vt.bi.google;
+package edu.vt.bi.google.util;
 
 import java.awt.Color;
 import java.io.BufferedWriter;
@@ -20,6 +20,12 @@ import org.geotools.styling.Style;
 import org.geotools.swing.JMapFrame;
 
 import com.google.common.geometry.S2CellId;
+
+import edu.vt.bi.google.GeoToolsWrapper;
+import edu.vt.bi.google.S2CellIdSet;
+import edu.vt.bi.google.S2CoveringDisplay;
+import edu.vt.bi.google.S2Feature;
+import edu.vt.bi.google.S2Wrapper;
 
 public class ShapesToCells {
 	
@@ -58,7 +64,7 @@ public class ShapesToCells {
 
 		String sourceFile = "data/adm2.shp";
 		String filterCQL = "ID_0 = 244";
-		int targetLevel = 13;
+		int targetLevel = 15;
 		boolean flatten = false;
 		boolean settleDisputes = true;
 		boolean interiorCoveringOnly = false;
@@ -136,6 +142,7 @@ public class ShapesToCells {
 
 			// for each pair-wise shape, find the disputed cells
 			for (int i=0; i<s2features.size()-1; i++) {
+				System.out.println("  " + i + " of " + s2features.size());
 				for (int j=i+1; j<s2features.size(); j++) {
 					
 					S2Feature feature1 = s2features.get(i);
