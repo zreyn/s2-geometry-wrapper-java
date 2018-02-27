@@ -1,11 +1,16 @@
 package edu.vt.bi.google;
 
+import java.io.Serializable;
 import java.util.HashMap;
 
 import com.google.common.geometry.S2Polygon;
 
-public class S2Feature {
+public class S2Feature implements Serializable {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -885427866053190292L;
 	private HashMap<String,String> attributes;
 	private S2CellIdSet cellIds;
 	private S2Polygon s2poly;

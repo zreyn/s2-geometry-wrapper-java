@@ -49,6 +49,10 @@ public class S2Wrapper {
 		return cell.getCenter();
 	}
 	
+	public static S2Cell getCellByToken(String token) {
+		return new S2Cell(S2CellId.fromToken(token));
+	}
+	
 	public static String getCellTokenForPoint(double lat, double lon, int level) {
 		S2LatLng ll = S2LatLng.fromDegrees(lat, lon);
 		S2CellId cell = S2CellId.fromLatLng(ll);
@@ -71,6 +75,24 @@ public class S2Wrapper {
 		
 		ArrayList<S2CellId> cells = S2Wrapper.ensureLevel(covering, targetLevel);
 		return cells;
+				
+	}
+	
+	public static ArrayList<S2CellId> getCovering(S2Polygon s2poly, int minLevel, int maxLevel, boolean interiorOnly) {
+		
+		S2RegionCoverer coverer = new S2RegionCoverer();
+		coverer.setMaxCells(10000);
+		coverer.setMinLevel(minLevel);
+		coverer.setMaxLevel(maxLevel);
+
+		S2CellUnion covering = null;
+		if (interiorOnly) {
+			covering = coverer.getInteriorCovering(s2poly);
+		} else {
+			covering = coverer.getCovering(s2poly);
+		}
+		
+		return covering.cellIds();
 				
 	}
 	

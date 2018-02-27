@@ -62,21 +62,21 @@ public class ShapesToCells {
 
 	public static void main(String[] args) throws IOException {
 
-		String sourceFile = "data/adm2.shp";
+		String sourceFile = "data/adm1.shp";
 		String filterCQL = "ID_0 = 244";
 		int targetLevel = 15;
 		boolean flatten = false;
 		boolean settleDisputes = true;
 		boolean interiorCoveringOnly = false;
 		boolean writeCellsToFile = true;
-		String outputFile = "data/cells_by_us_counties_unique.txt";
+		String outputFile = "data/cells_by_us_states_unique.txt";
 		
 		HashSet<String> attrToIgnore = new HashSet<String>();
 		attrToIgnore.add("the_geom");
 		
 		HashSet<String> attrToOutput = new HashSet<String>();
-		attrToOutput.add("NAME_2");
-		attrToOutput.add("ID_2");
+		attrToOutput.add("NAME_1");
+		attrToOutput.add("ID_1");
 
 		System.out.println("Reading file...");
 		

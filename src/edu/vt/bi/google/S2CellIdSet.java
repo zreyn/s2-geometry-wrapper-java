@@ -1,12 +1,17 @@
 package edu.vt.bi.google;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
 
 import com.google.common.geometry.S2CellId;
 
-public class S2CellIdSet {
+public class S2CellIdSet implements Serializable {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1282375965621799031L;
 	private HashSet<String> set;
 
 	public S2CellIdSet() {

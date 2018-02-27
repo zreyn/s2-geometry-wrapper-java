@@ -15,7 +15,7 @@ public class ShapefileSchema {
 	public static void main(String[] args) {
 
 
-		String sourceFile = "data/adm2.shp";
+		String sourceFile = "data/tl_2015_us_zcta510.shp";
 		
 		// Get the file
 		FileDataStore store = null;
