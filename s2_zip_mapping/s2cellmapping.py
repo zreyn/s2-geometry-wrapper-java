@@ -21,7 +21,7 @@ def main(start, stop, outfile):
                 with open(outfile, 'a') as o:
                     writer = csv.writer(o, delimiter=',', lineterminator='\n')
                     for cell in cells:
-                        if len(cell) != 9: # l15 cells are 9 chars long
+                        if len(cell) == 9: # l15 cells are 9 chars long
                             writer.writerow([cell] + row)
                         else:
                             writer.writerow(['-'] + row)
