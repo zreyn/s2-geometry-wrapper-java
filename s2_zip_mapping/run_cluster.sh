@@ -31,8 +31,7 @@ cd $JOBROOT
 COMMAND_FILE=$JOBROOT/commands_$SLURM_ARRAY_TASK_ID.commands
 rm $COMMAND_FILE
 
-CHECK=`ls -la $FILE | grep -c 609037358`
-if [ "$CHECK" -eq "0" ]; then
+if [ $(stat -c %s $SCRATCH_FILE) -ne $(stat -c %s $FILE) ]; then
         echo "Copying File $SCRATCH_FILE to $FILE";
         cp $SCRATCH_FILE $FILE;
         tar xvzf $FILE -C $JOBROOT
