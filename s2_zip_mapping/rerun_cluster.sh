@@ -23,7 +23,7 @@ ZIPS_PER_NODE=16
 PROCESSES_PER_NODE=16
 
 CURRENT=0
-CHUNK_SIZE=16
+CHUNK_SIZE=1
 SCRATCH_FILE=/scratch/s2/s2mapping.tar.gz
 LOCAL_SCRATCH=/localscratch/s2
 FILE=/localscratch/s2/s2mapping.tar.gz
@@ -52,7 +52,7 @@ MAIN_START=$((SLURM_ARRAY_TASK_ID*ZIPS_PER_NODE))
 while [ $CURRENT -lt $PROCESSES_PER_NODE ]; do
         START=$((CURRENT*CHUNK_SIZE+MAIN_START))
         STOP=$((START+CHUNK_SIZE))
-        OCMD="$CMD $LOCAL_ZIP_FILE $JOBROOT/out_data $START $((START+ZIPS_PER_NODE)) &"
+        OCMD="$CMD $LOCAL_ZIP_FILE $JOBROOT/out_data $START $STOP &"
         echo $OCMD >> $COMMAND_FILE
         eval $OCMD
         ((CURRENT++))
