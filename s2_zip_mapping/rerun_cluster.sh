@@ -3,7 +3,7 @@
 #SBATCH --partition=discovery_q
 #SBATCH --nodes=1
 #SBATCH --job-name=s2mapping
-#SBATCH --array=0-40
+#SBATCH --array=0-31
 #SBATCH --exclusive
 #SBATCH -t 24:00:00
 
@@ -16,7 +16,7 @@ module load Python/2.7.13-foss-2017a
 ulimit -f unlimited
 ulimit -t unlimited
 ulimit -v unlimited
-ulimit -u 32000
+ulimit -u 64000
 
 JOBROOT=/home/zreyn/s2mapping
 ZIPS_PER_NODE=16
@@ -36,13 +36,13 @@ rm $COMMAND_FILE
 
 mkdir $LOCAL_SCRATCH;
 cd $LOCAL_SCRATCH
-if [ $(stat -c %s $SCRATCH_FILE) -ne $(stat -c %s $FILE) ]; then
+#if [ $(stat -c %s $SCRATCH_FILE) -ne $(stat -c %s $FILE) ]; then
         echo "Copying File $SCRATCH_FILE to $FILE";
         mkdir $LOCAL_SCRATCH;
         cp $SCRATCH_FILE $FILE;
         tar xvzf $FILE -C $LOCAL_SCRATCH;
         cp $ZIP_FILE $LOCAL_ZIP_FILE;
-fi
+#fi
 
 #CMD="python s2cellmapping.py 95453 100000 out_data/99999.csv"
 CMD="python rerun-problem-zips.py"
